@@ -119,5 +119,27 @@ public class RedisRepository {
         }
         return Optional.empty();
     }
+    
+    /**
+     * すべてのteamspaceを取得（API⑥用）
+     */
+    public List<Teamspace> getAllTeamspaces() {
+        List<Teamspace> teamspaces = new ArrayList<>();
+        try (Jedis jedis = jedisPool.getResource()) {
+            Set<String> keys = jedis.keys(TEAMSPACE_KEY_PREFIX + "*");
+            for (String key : keys) {
+                String json = jedis.get(key);
+                if (json != null) {
+                    try {
+                        Teamspace teamspace = objectMapper.readValue(json, Teamspace.class);
+                        teamspaces.add(teamspace);
+                    } catch (JsonProcessingException e) {
+                        logger.warn("Failed to parse teamspace: {}", key);
+                    }
+                }
+            }
+        }
+        return teamspaces;
+    }
 }
 

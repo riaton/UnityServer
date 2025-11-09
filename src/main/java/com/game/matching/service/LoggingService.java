@@ -93,6 +93,34 @@ public class LoggingService {
         logger.error(message);
     }
     
+    // API⑥
+    public void logUserStateChecked(String userId) {
+        String message = String.format("[API⑥] Check user state successfully - userId: %s, timestamp: %s",
+                                       userId, Instant.now().toString());
+        logger.info(message);
+        logStructured("CHECK_USER_STATE", userId, null, null);
+    }
+    
+    public void logUserStateCheckFailed(String userId, String errorCode, String errorMessage) {
+        String message = String.format("[API⑥] Failed to check user state - userId: %s, error: %s, message: %s, timestamp: %s",
+                                       userId, errorCode, errorMessage, Instant.now().toString());
+        logger.error(message);
+    }
+    
+    // API⑦
+    public void logUsersListed(String userId, String teamspaceId, List<String> userIds) {
+        String message = String.format("[API⑦] List users successfully - userIds: %s, teamspaceId: %s, timestamp: %s",
+                                       userIds, teamspaceId, Instant.now().toString());
+        logger.info(message);
+        logStructured("LIST_USERS", userId, teamspaceId, null);
+    }
+    
+    public void logUsersListFailed(String userId, String teamspaceId, String errorCode, String errorMessage) {
+        String message = String.format("[API⑦] Failed to list users - userId: %s, teamspaceId: %s, error: %s, message: %s, timestamp: %s",
+                                       userId, teamspaceId, errorCode, errorMessage, Instant.now().toString());
+        logger.error(message);
+    }
+    
     private void logStructured(String eventType, String userId, String teamspaceId, String partyId) {
         try {
             Map<String, Object> logData = new HashMap<>();
