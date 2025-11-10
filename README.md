@@ -2,14 +2,6 @@
 
 Java Spring Bootで実装されたマッチングシステムのバックエンドAPIサーバー
 
-## 機能
-
-- **API①**: チームスペース作成
-- **API②**: チーム参加
-- **API③**: チーム脱退
-- **API④**: ゲーム開始
-- **WebSocket**: リアルタイム通知（メンバーリスト更新、partyId通知）
-
 ## 技術スタック
 
 - Java 17
@@ -18,139 +10,122 @@ Java Spring Bootで実装されたマッチングシステムのバックエン�
 - AWS Cognito (JWT認証)
 - WebSocket (Spring WebSocket)
 
-## 環境変数
+## ローカルでの実行方法
 
-以下の環境変数を設定してください：
+### 前提条件
+
+- Java 17以上がインストールされていること
+- Docker Desktopがインストール・起動されていること
+- Gradleが利用可能であること（またはGradle Wrapperを使用）
+
+### 1. Redisの起動
+
+DockerでRedisを起動します：
 
 ```bash
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Cognito
-COGNITO_USER_POOL_ID=ap-northeast-1_ySe4wHv7r
-COGNITO_REGION=ap-northeast-1
+docker run --name redis-matching -p 6379:6379 -d redis:7
 ```
 
-## ビルド・起動
+Redisが起動しているか確認：
 
-### Gradle Wrapperの生成
+```bash
+docker ps | grep redis-matching
+```
+
+### 2. 環境変数の設定
+
+ローカル開発用の環境変数を設定します：
+
+```bash
+# Redis接続情報
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+
+# Cognito設定（本番環境用、ローカル開発では不要）
+export COGNITO_USER_POOL_ID=ap-northeast-1_ySe4wHv7r
+export COGNITO_REGION=ap-northeast-1
+
+# 開発用: JWT認証をバイパス（ローカル開発時のみ）
+export AUTH_BYPASS=true
+```
+
+### 3. アプリケーションの起動
+
+#### Gradle Wrapperを使用（推奨）
 
 ```bash
 cd UnityServer
-gradle wrapper --gradle-version 8.5
-```
-
-### ビルド
-
-```bash
-./gradlew build
-```
-
-### 実行
-
-```bash
 ./gradlew bootRun
-```
-
-または
-
-```bash
-java -jar build/libs/unity-server-0.0.0-SNAPSHOT.jar
 ```
 
 サーバーは `http://localhost:8080` で起動します。
 
-## APIエンドポイント
+### 4. 動作確認
 
-### API① POST /api/organize_team
-チームスペースを作成します。
+#### API①: チームスペース作成
 
-**Request:**
-```json
-{
-  "userId": "user-123"
-}
+```bash
+curl -X POST http://localhost:8080/api/organize_team \
+  -H 'Content-Type: application/json' \
+  -H 'X-Debug-UserId: user-123' \
+  -d '{"userId":"user-123"}'
 ```
 
-**Response (201 Created):**
+**レスポンス例:**
 ```json
-{
-  "teamspaceId": "550e8400-e29b-41d4-a716-446655440000"
-}
+{"teamspaceId":"550e8400-e29b-41d4-a716-446655440000"}
 ```
 
-### API② POST /api/join_team
-チームに参加します。
+### 5. Redisデータの確認
 
-**Request:**
-```json
-{
-  "teamspaceId": "550e8400-e29b-41d4-a716-446655440000",
-  "userId": "user-456"
-}
+#### redis-cliで接続
+
+```bash
+docker exec -it redis-matching redis-cli
 ```
 
-**Response (200 OK):**
-```json
-{}
+#### よく使うコマンド
+
+```bash
+# すべてのteamspaceキーを表示
+KEYS teamspace:*
+
+# 特定のteamspaceのデータを取得
+GET teamspace:<teamspaceId>
+
+# JSONを見やすく整形（jqが必要）
+docker exec redis-matching redis-cli GET "teamspace:<teamspaceId>" | jq .
+
+# キーの有効期限を確認（秒単位）
+TTL teamspace:<teamspaceId>
+
+# 特定のキーを削除
+DEL teamspace:<teamspaceId>
+
+# すべてのキーを削除（注意）
+FLUSHALL
 ```
 
-### API③ POST /api/leave_team
-チームから脱退します。
+### 6. クリーンアップ
 
-**Request:**
-```json
-{
-  "teamspaceId": "550e8400-e29b-41d4-a716-446655440000",
-  "userId": "user-456"
-}
+#### Redisコンテナの停止・削除
+
+```bash
+docker stop redis-matching
+docker rm redis-matching
 ```
 
-**Response (200 OK):**
-```json
-{}
-```
+#### アプリケーションの停止
 
-### API④ POST /api/start_game
-ゲームを開始します。
+`Ctrl+C`で停止します。
 
-**Request:**
-```json
-{
-  "teamspaceId": "550e8400-e29b-41d4-a716-446655440000",
-  "userId": "user-123"
-}
-```
+### 開発用認証バイパスについて
 
-**Response (200 OK):**
-```json
-{
-  "partyId": "660e8400-e29b-41d4-a716-446655440001"
-}
-```
+ローカル開発時は、環境変数 `AUTH_BYPASS=true` を設定することでJWT認証をバイパスできます。
 
-## WebSocket
+この場合、`X-Debug-UserId` ヘッダーで指定したユーザーIDが使用されます（未指定の場合は `local-user` が使用されます）。
 
-WebSocketエンドポイント: `ws://localhost:8080/ws?teamspaceId={teamspaceId}&userId={userId}`
-
-### メッセージ形式
-
-#### メンバーリスト更新通知
-```json
-{
-  "type": "memberList",
-  "userIds": ["user-123", "user-456"]
-}
-```
-
-#### partyId通知
-```json
-{
-  "type": "partyId",
-  "partyId": "660e8400-e29b-41d4-a716-446655440001"
-}
-```
+**注意**: 本番環境では必ず `AUTH_BYPASS` を設定しないでください。
 
 ## 認証
 
