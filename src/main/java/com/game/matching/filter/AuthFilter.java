@@ -32,6 +32,19 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
+        // 開発用バイパス: AUTH_BYPASS=true の場合はJWT検証をスキップ
+        String authBypass = System.getenv("AUTH_BYPASS");
+        if ("true".equalsIgnoreCase(authBypass)) {
+            String debugUserId = request.getHeader("X-Debug-UserId");
+            if (debugUserId == null || debugUserId.trim().isEmpty()) {
+                debugUserId = "local-user";
+            }
+            request.setAttribute("userId", debugUserId);
+            request.setAttribute("token", "bypassed");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

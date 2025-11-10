@@ -3,8 +3,6 @@
 build/
 !build/libs/
 *.gradle
-gradle-wrapper.jar
-gradle-wrapper.properties
 
 # IDE
 .idea/
