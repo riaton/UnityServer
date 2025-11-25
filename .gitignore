@@ -3,6 +3,9 @@
 build/
 !build/libs/
 *.gradle
+!settings.gradle
+!build.gradle
+!*.gradle.kts
 
 # IDE
 .idea/
@@ -15,6 +18,7 @@ build/
 # Compiled
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 
