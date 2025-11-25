@@ -3,6 +3,9 @@
 build/
 !build/libs/
 *.gradle
+!settings.gradle
+!build.gradle
+!*.gradle.kts
 
 # IDE
 .idea/
